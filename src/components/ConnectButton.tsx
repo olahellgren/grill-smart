@@ -18,12 +18,15 @@ export default function ConnectButton({ status, onConnect, onDisconnect, error }
         style={{
           padding: '0.75rem 1.5rem',
           background: isConnected ? 'var(--red)' : 'var(--accent)',
-          color: '#fff', border: 'none', borderRadius: '8px',
-          fontSize: '1rem', cursor: isConnecting ? 'wait' : 'pointer',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          cursor: isConnecting ? 'wait' : 'pointer',
           opacity: isConnecting ? 0.7 : 1,
         }}
       >
-        {isConnecting ? 'Connecting…' : isConnected ? 'Disconnect' : 'Connect to Grill'}
+        {isConnecting ? 'Connecting…' : isConnected ? 'Disconnect' : 'Connect'}
       </button>
       {error && <p style={{ color: 'var(--red)', fontSize: '0.85rem' }}>{error}</p>}
     </div>

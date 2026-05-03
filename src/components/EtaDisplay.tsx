@@ -3,16 +3,25 @@ interface Props {
 }
 
 export default function EtaDisplay({ etaSecs }: Props) {
-  if (etaSecs === null) return (
-    <div style={{ color: 'var(--muted)', fontSize: '0.9rem', textAlign: 'center' }}>
-      ETA: calculating…
-    </div>
-  )
-  if (etaSecs === 0) return (
-    <div style={{ color: 'var(--green)', fontWeight: 'bold', textAlign: 'center', fontSize: '1.1rem' }}>
-      ✓ Target reached!
-    </div>
-  )
+  if (etaSecs === null)
+    return (
+      <div style={{ color: 'var(--muted)', fontSize: '0.9rem', textAlign: 'center' }}>
+        ETA: calculating…
+      </div>
+    )
+  if (etaSecs === 0)
+    return (
+      <div
+        style={{
+          color: 'var(--green)',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          fontSize: '1.1rem',
+        }}
+      >
+        ✓ Target reached!
+      </div>
+    )
   const mins = Math.ceil(etaSecs / 60)
   return (
     <div style={{ textAlign: 'center' }}>

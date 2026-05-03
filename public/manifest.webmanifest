@@ -1,0 +1,17 @@
+{
+  "name": "GrillSmart Thermometer",
+  "short_name": "GrillSmart",
+  "description": "Bluetooth companion for the Claes Ohlson A550 meat thermometer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#863bff",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

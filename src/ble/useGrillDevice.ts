@@ -1,9 +1,15 @@
 import { useState, useRef, useCallback } from 'react'
 import { SERVICE_UUID, NOTIFY_CHAR_UUID, WRITE_CHAR_UUID } from './constants'
 import {
-  buildSecurityKey, buildRequestToken, buildVerifyToken,
-  buildClockSync, buildPollStatus, buildSetCookingSettings,
-  decodeDeviceState, decodeTokenReply, decodeStatusPacket,
+  buildSecurityKey,
+  buildRequestToken,
+  buildVerifyToken,
+  buildClockSync,
+  buildPollStatus,
+  buildSetCookingSettings,
+  decodeDeviceState,
+  decodeTokenReply,
+  decodeStatusPacket,
 } from './packets'
 import type { StatusPacket } from './packets'
 import { saveToken, loadToken } from '../storage/tokenStore'
@@ -17,11 +23,17 @@ export interface GrillDevice {
   probe2: StatusPacket | null
   connect: () => Promise<void>
   disconnect: () => void
-  setTarget: (probeId: 0 | 1, targetTempC: number, unit: TempUnit, food?: number, doneness?: number) => Promise<void>
+  setTarget: (
+    probeId: 0 | 1,
+    targetTempC: number,
+    unit: TempUnit,
+    food?: number,
+    doneness?: number,
+  ) => Promise<void>
   error: string | null
 }
 
-export function useGrillDevice(): GrillDevice {
+export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const [probe1, setProbe1] = useState<StatusPacket | null>(null)
   const [probe2, setProbe2] = useState<StatusPacket | null>(null)
@@ -34,11 +46,15 @@ export function useGrillDevice(): GrillDevice {
 
   const write = useCallback(async (bytes: Uint8Array) => {
     if (!writeCharRef.current) throw new Error('Not connected')
-    await writeCharRef.current.writeValueWithResponse(bytes)
+    await writeCharRef.current.writeValueWithResponse(bytes as Uint8Array<ArrayBuffer>)
   }, [])
 
   const waitForNotification = useCallback(
-    (char: BluetoothRemoteGATTCharacteristic, header: number, timeoutMs = 5000): Promise<DataView> => {
+    (
+      char: BluetoothRemoteGATTCharacteristic,
+      header: number,
+      timeoutMs = 5000,
+    ): Promise<DataView> => {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           char.removeEventListener('characteristicvaluechanged', handler as EventListener)
@@ -74,8 +90,23 @@ export function useGrillDevice(): GrillDevice {
         setProbe2(null)
       })
 
-      const server = await device.gatt!.connect()
-      const service = await server.getPrimaryService(SERVICE_UUID)
+      // Retry GATT connect up to 5 times — Windows sometimes needs a moment to release
+      // a prior bonded state, and the device needs ~1s after any previous connection
+      let server: BluetoothRemoteGATTServer | null = null
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          server = await device.gatt!.connect()
+          // Give Windows BLE stack a moment to settle before accessing services
+          await new Promise((r) => setTimeout(r, 500))
+          if (!server.connected) throw new Error('Disconnected after connect')
+          break
+        } catch (e) {
+          if (attempt === 4) throw e
+          await new Promise((r) => setTimeout(r, 1500))
+        }
+      }
+      if (!server!.connected) throw new Error('Device disconnected before service discovery')
+      const service = await server!.getPrimaryService(SERVICE_UUID)
       const notifyChar = await service.getCharacteristic(NOTIFY_CHAR_UUID)
       const writeChar = await service.getCharacteristic(WRITE_CHAR_UUID)
       writeCharRef.current = writeChar
@@ -107,14 +138,19 @@ export function useGrillDevice(): GrillDevice {
       }
 
       // Step 3: verify token
-      const p3 = waitForNotification(notifyChar, 0x8C)
+      const p3 = waitForNotification(notifyChar, 0x8c)
       await write(buildVerifyToken(token, nonce))
       await p3
 
       // Step 4: clock sync
-      const p4 = waitForNotification(notifyChar, 0x8A)
+      const p4 = waitForNotification(notifyChar, 0x8a)
       await write(buildClockSync(nonce))
       await p4
+
+      // Step 5: push unit preference to device so probe display and readings use the right unit
+      await write(buildSetCookingSettings(nonce, 0, 75, preferredUnit))
+      await new Promise((r) => setTimeout(r, 200))
+      await write(buildSetCookingSettings(nonce, 1, 75, preferredUnit))
 
       // Live temperature notifications
       notifyChar.addEventListener('characteristicvaluechanged', (e: Event) => {
@@ -132,28 +168,31 @@ export function useGrillDevice(): GrillDevice {
       pollIntervalRef.current = setInterval(async () => {
         try {
           await write(buildPollStatus(0, nonceRef.current))
-          await new Promise(r => setTimeout(r, 300))
+          await new Promise((r) => setTimeout(r, 300))
           await write(buildPollStatus(1, nonceRef.current))
-        } catch { /* disconnected */ }
+        } catch {
+          /* disconnected */
+        }
       }, 2000)
-
     } catch (err) {
       setStatus('error')
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [write, waitForNotification])
+  }, [write, waitForNotification, preferredUnit])
 
   const disconnect = useCallback(() => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
     deviceRef.current?.gatt?.disconnect()
   }, [])
 
-  const setTarget = useCallback(async (
-    probeId: 0 | 1, targetTempC: number, unit: TempUnit,
-    food = 0, doneness = 0,
-  ) => {
-    await write(buildSetCookingSettings(nonceRef.current, probeId, targetTempC, unit, food, doneness))
-  }, [write])
+  const setTarget = useCallback(
+    async (probeId: 0 | 1, targetTempC: number, unit: TempUnit, food = 0, doneness = 0) => {
+      await write(
+        buildSetCookingSettings(nonceRef.current, probeId, targetTempC, unit, food, doneness),
+      )
+    },
+    [write],
+  )
 
   return { status, probe1, probe2, connect, disconnect, setTarget, error }
 }

@@ -8,6 +8,8 @@ import EtaDisplay from './components/EtaDisplay'
 import TempAlert from './components/TempAlert'
 import TempGraph from './components/TempGraph'
 import InfoButton from './components/InfoButton'
+import ResumePrompt from './components/ResumePrompt'
+import { loadSession, saveSession, clearSession } from './storage/sessionStore'
 import type { MeatPreset, TempUnit, ProbeReading } from './types'
 
 export default function App() {
@@ -22,12 +24,42 @@ export default function App() {
   const [ovenTempC, setOvenTempC] = useState(180)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
-  // Request notification permission on first load
+  // Session resume state — null = not yet decided, undefined = no saved session
+  const [pendingSession, setPendingSession] = useState<ReturnType<typeof loadSession> | undefined>(undefined)
+
+  // Load saved session on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
+    const saved = loadSession()
+    if (saved && (saved.readings1.length > 0 || saved.readings2.length > 0)) {
+      setPendingSession(saved)
+    } else {
+      setPendingSession(undefined)
+    }
   }, [])
+
+  function handleResume() {
+    if (!pendingSession) return
+    setTargets(pendingSession.targets)
+    setReadings1(pendingSession.readings1)
+    setReadings2(pendingSession.readings2)
+    setOvenTempC(pendingSession.ovenTempC)
+    setUnit(pendingSession.unit)
+    setPendingSession(undefined)
+  }
+
+  function handleClear() {
+    clearSession()
+    setPendingSession(undefined)
+  }
+
+  // Auto-save session whenever readings or settings change
+  useEffect(() => {
+    if (readings1.length === 0 && readings2.length === 0) return
+    saveSession({ targets, readings1, readings2, ovenTempC, unit, savedAt: Date.now() })
+  }, [readings1, readings2, targets, ovenTempC, unit])
 
   // Screen wake lock — keep display on while connected
   useEffect(() => {
@@ -37,9 +69,7 @@ export default function App() {
     async function acquire() {
       try {
         wakeLockRef.current = await navigator.wakeLock.request('screen')
-      } catch {
-        /* denied or not supported */
-      }
+      } catch { /* denied or not supported */ }
     }
 
     function onVisibility() {
@@ -48,7 +78,6 @@ export default function App() {
 
     acquire()
     document.addEventListener('visibilitychange', onVisibility)
-
     return () => {
       released = true
       document.removeEventListener('visibilitychange', onVisibility)
@@ -74,11 +103,9 @@ export default function App() {
     ])
   }, [device.probe2])
 
-  // Reset on disconnect
+  // Clear readings on disconnect but keep targets — user will reconnect to same cook
   useEffect(() => {
     if (device.status === 'disconnected') {
-      setReadings1([])
-      setReadings2([])
       setAlertDismissed([false, false])
     }
   }, [device.status])
@@ -102,13 +129,10 @@ export default function App() {
 
   const probe1Ready = targets[0] !== null && device.probe1 !== null && device.probe1.tempC >= targets[0]
   const probe2Ready = targets[1] !== null && device.probe2 !== null && device.probe2.tempC >= targets[1]!
-
-  // Show one alert at a time — probe 1 takes priority
   const alertProbe: 1 | 2 | null =
     probe1Ready && !alertDismissed[0] ? 1 : probe2Ready && !alertDismissed[1] ? 2 : null
 
   const eta = useEta({ readings: readings1, targetTempC: targets[0] ?? 75, ovenTempC })
-
   const hasHistory = readings1.length >= 2 || readings2.length >= 2
 
   return (
@@ -126,6 +150,15 @@ export default function App() {
         onDisconnect={device.disconnect}
         error={device.error}
       />
+
+      {pendingSession && device.status === 'disconnected' && (
+        <ResumePrompt
+          session={pendingSession}
+          unit={unit}
+          onResume={handleResume}
+          onClear={handleClear}
+        />
+      )}
 
       {(device.probe1 || device.probe2) && (
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -145,19 +178,11 @@ export default function App() {
         </div>
       )}
 
-      <div
-        style={{
-          background: 'var(--surface)',
-          borderRadius: '10px',
-          padding: '0.6rem 1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-        }}
-      >
-        <span style={{ color: 'var(--muted)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-          Oven temp:
-        </span>
+      <div style={{
+        background: 'var(--surface)', borderRadius: '10px',
+        padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.6rem',
+      }}>
+        <span style={{ color: 'var(--muted)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>Oven temp:</span>
         <input
           type="number"
           value={unit === 'F' ? Math.round((ovenTempC * 9) / 5 + 32) : ovenTempC}
@@ -166,13 +191,9 @@ export default function App() {
             if (!isNaN(v)) setOvenTempC(unit === 'F' ? ((v - 32) * 5) / 9 : v)
           }}
           style={{
-            width: '70px',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
-            borderRadius: '6px',
-            padding: '0.25rem 0.5rem',
-            fontSize: '0.95rem',
+            width: '70px', background: 'var(--bg)', color: 'var(--text)',
+            border: '1px solid var(--border)', borderRadius: '6px',
+            padding: '0.25rem 0.5rem', fontSize: '0.95rem',
           }}
         />
         <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>°{unit} — used for ETA</span>

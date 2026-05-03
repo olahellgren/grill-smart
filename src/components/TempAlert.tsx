@@ -5,14 +5,8 @@ interface Props {
   onDismiss: () => void
 }
 
-export default function TempAlert({ probeNum, onDismiss }: Props) {
-  useEffect(() => {
-    if (!probeNum) return
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('🔥 GrillSmart — Ready!', {
-        body: `Probe ${probeNum} has reached target temperature.`,
-      })
-    }
+function playBeeps() {
+  try {
     const ctx = new AudioContext()
     const beep = (t: number) => {
       const osc = ctx.createOscillator()
@@ -28,56 +22,60 @@ export default function TempAlert({ probeNum, onDismiss }: Props) {
     beep(ctx.currentTime)
     beep(ctx.currentTime + 0.5)
     beep(ctx.currentTime + 1.0)
+  } catch {
+    /* audio not available */
+  }
+}
+
+export default function TempAlert({ probeNum, onDismiss }: Props) {
+  useEffect(() => {
+    if (!probeNum) return
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🔥 GrillSmart — Ready!', {
+          body: `Probe ${probeNum} has reached target temperature.`,
+        })
+      }
+    } catch {
+      /* notifications not available */
+    }
+    playBeeps()
   }, [probeNum])
 
   if (!probeNum) return null
 
   return (
     <div
-      onClick={onDismiss}
       style={{
         position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+        bottom: 0,
+        left: 0,
+        right: 0,
         zIndex: 100,
         padding: '1rem',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+        background: '#4caf50',
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: '#fff',
-          borderRadius: '20px',
-          padding: '2rem',
-          width: '100%',
-          maxWidth: '420px',
-          textAlign: 'center',
-          color: '#111',
-          marginBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
-      >
-        <div style={{ fontSize: '4rem', lineHeight: 1 }}>✅</div>
-        <h2 style={{ margin: '0.75rem 0 0.4rem', fontSize: '1.5rem', color: '#111' }}>
+      <div style={{ maxWidth: '480px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>✅</div>
+        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.1rem' }}>
           Probe {probeNum} is ready!
-        </h2>
-        <p style={{ color: '#555', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-          Target temperature reached.
-        </p>
+        </div>
+        <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+          Target temperature reached
+        </div>
         <button
           onClick={onDismiss}
           style={{
-            background: '#4caf50',
-            color: '#fff',
+            background: '#fff',
+            color: '#4caf50',
             border: 'none',
-            padding: '0.85rem 0',
-            borderRadius: '12px',
-            fontSize: '1.05rem',
-            cursor: 'pointer',
-            width: '100%',
+            padding: '0.7rem 2.5rem',
+            borderRadius: '10px',
+            fontSize: '1rem',
             fontWeight: 'bold',
+            cursor: 'pointer',
           }}
         >
           Got it!

@@ -1,0 +1,74 @@
+<h2>Three Approaches</h2>
+<p class="subtitle">Pick the architecture that fits — all start with the same BLE reverse engineering phase</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Web Bluetooth PWA ⭐ Recommended</h3>
+      <p><strong>Stack:</strong> TypeScript + React (or plain JS) in the browser</p>
+      <p><strong>BLE:</strong> Chrome's built-in Web Bluetooth API — no WSL/BLE gap, Chrome on Windows talks directly to the adapter</p>
+      <p><strong>Mobile:</strong> Same code runs in Chrome for Android, installable as a PWA</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>One codebase for desktop + Android</li>
+          <li>No WSL Bluetooth headaches</li>
+          <li>Fast iteration in browser</li>
+          <li>Works today, no build setup needed</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Chrome only (no Firefox support for Web BT)</li>
+          <li>Limited background operation on mobile</li>
+          <li>Needs HTTPS for some features (easy to self-sign)</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Python Desktop → Native Android</h3>
+      <p><strong>Stack:</strong> Python + bleak (BLE) + FastAPI backend + simple web UI for desktop, then a separate Android app (Kotlin/Java) later</p>
+      <p><strong>BLE:</strong> Python <code>bleak</code> running on Windows (not WSL), serves data via local HTTP to the browser in WSL</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Python is great for rapid BLE prototyping</li>
+          <li>bleak is a mature BLE library</li>
+          <li>Full background operation on desktop</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>WSL can't access BLE — Python must run on Windows side</li>
+          <li>Two separate codebases for desktop + mobile</li>
+          <li>More moving parts</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Flutter Cross-Platform</h3>
+      <p><strong>Stack:</strong> Dart + Flutter + flutter_blue_plus for BLE</p>
+      <p><strong>Builds to:</strong> Windows desktop app + Android APK from one codebase</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>True native UI on both platforms</li>
+          <li>Excellent BLE support via flutter_blue_plus</li>
+          <li>Single codebase, real app experience</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Need to learn Flutter/Dart if unfamiliar</li>
+          <li>Heavier build toolchain to set up</li>
+          <li>Slower initial iteration</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:2rem">
+  <h3>Phase 0 (same regardless of choice)</h3>
+  <p>BLE reverse engineering: nRF Connect scan → Android HCI snoop log → protocol documentation</p>
+</div>

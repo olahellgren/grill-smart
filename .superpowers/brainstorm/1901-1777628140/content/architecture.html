@@ -1,0 +1,69 @@
+<h2>Architecture Overview</h2>
+<p class="subtitle">Two phases — reverse engineering first, then build</p>
+
+<div style="display:flex;gap:2rem;flex-wrap:wrap;margin-top:1rem">
+
+  <div style="flex:1;min-width:280px">
+    <h3 style="color:var(--accent)">Phase 0 — Reverse Engineering</h3>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.75rem">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Step 1</div>
+        <strong>nRF Connect (Android)</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Scan device → discover GATT services + characteristics → read raw values</p>
+      </div>
+      <div style="text-align:center;opacity:0.5">↓</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Step 2</div>
+        <strong>HCI Snoop Log (Android)</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Enable in Developer Options → capture traffic → analyze in Wireshark to decode byte format</p>
+      </div>
+      <div style="text-align:center;opacity:0.5">↓</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Output</div>
+        <strong>Protocol Doc</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Service UUID, characteristic UUIDs, byte layout for both probes</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:280px">
+    <h3 style="color:var(--accent)">Phase 1 — Web App (Desktop)</h3>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.75rem">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Frontend</div>
+        <strong>Vite + React + TypeScript</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Runs in Chrome on Windows — fast dev server, no build step needed during dev</p>
+      </div>
+      <div style="text-align:center;opacity:0.5">↓</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">BLE Layer</div>
+        <strong>Web Bluetooth API</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Chrome talks directly to A550 adapter — no extra software, no WSL gap</p>
+      </div>
+      <div style="text-align:center;opacity:0.5">↓</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Storage</div>
+        <strong>localStorage</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Temperature history + meat presets — no backend needed</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:280px">
+    <h3 style="color:var(--accent)">Phase 2 — PWA (Android)</h3>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.75rem">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Same codebase</div>
+        <strong>Add manifest.json + Service Worker</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Makes the app installable on Android home screen</p>
+      </div>
+      <div style="text-align:center;opacity:0.5">↓</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+        <div class="label">Host options</div>
+        <strong>Local network or free static host</strong>
+        <p style="margin:0.25rem 0 0;font-size:0.9em;opacity:0.8">Serve from your PC on local WiFi, or deploy to Vercel/Netlify for anywhere access</p>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,65 @@
+<h2>Phase 0 — BLE Reverse Engineering</h2>
+<p class="subtitle">Step-by-step: from unknown device to documented protocol</p>
+
+<div style="display:flex;flex-direction:column;gap:1rem;margin-top:1rem">
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+    <div class="label">Step 1 — Passive scan</div>
+    <strong>nRF Connect on Android</strong>
+    <p style="margin:0.5rem 0 0;font-size:0.9em;opacity:0.85">
+      Turn on the A550. Open nRF Connect → Scanner tab → find the device.
+      Note the <strong>advertised name</strong> and <strong>manufacturer data</strong> bytes in the advertisement packet.
+      Connect → explore the GATT server: list all <strong>Service UUIDs</strong> and <strong>Characteristic UUIDs</strong>.
+      Try reading each readable characteristic and note the raw byte values.
+    </p>
+  </div>
+
+  <div style="text-align:center;opacity:0.4;font-size:1.2em">↓</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+    <div class="label">Step 2 — Traffic capture</div>
+    <strong>Android HCI Snoop Log</strong>
+    <p style="margin:0.5rem 0 0;font-size:0.9em;opacity:0.85">
+      On Android: <em>Developer Options → Enable Bluetooth HCI snoop log</em>.
+      Connect the A550 (with nRF Connect or any app), move probes between hot/cold to generate readings.
+      Pull the log: <code>adb pull /sdcard/btsnoop_hci.log</code> (path varies by phone).
+      Open in <strong>Wireshark</strong> → filter <code>btatt</code> → find notification packets on the temp characteristic.
+    </p>
+  </div>
+
+  <div style="text-align:center;opacity:0.4;font-size:1.2em">↓</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+    <div class="label">Step 3 — Decode bytes</div>
+    <strong>Map raw bytes → temperature values</strong>
+    <p style="margin:0.5rem 0 0;font-size:0.9em;opacity:0.85">
+      Observe notification payload while changing probe temp (ice water = ~0°C, boiling = ~100°C).
+      Common patterns: 16-bit little-endian integer × 0.1 = °C, or big-endian, or fixed-point.
+      Record service UUID, characteristic UUID, byte offsets for probe 1 and probe 2.
+    </p>
+  </div>
+
+  <div style="text-align:center;opacity:0.4;font-size:1.2em">↓</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+    <div class="label">Step 4 — Shortcut (try first)</div>
+    <strong>Check online resources</strong>
+    <p style="margin:0.5rem 0 0;font-size:0.9em;opacity:0.85">
+      Before full capture: search GitHub for <em>"A550 bluetooth"</em>, <em>"44-1794 BLE"</em>, <em>"GrillSmart protocol"</em>.
+      Also check Home Assistant community forums — thermometer integrations are often already reverse-engineered there.
+      May save hours of work.
+    </p>
+  </div>
+
+  <div style="text-align:center;opacity:0.4;font-size:1.2em">↓</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+    <div class="label">Output</div>
+    <strong>protocol.md in repo</strong>
+    <p style="margin:0.5rem 0 0;font-size:0.9em;opacity:0.85">
+      Service UUID · Characteristic UUID · Notification format · Byte layout for both probes.
+      This doc drives the Web Bluetooth implementation in Phase 1.
+    </p>
+  </div>
+
+</div>

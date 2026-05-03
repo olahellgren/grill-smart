@@ -1,0 +1,64 @@
+<h2>App Features & Screens</h2>
+<p class="subtitle">What the app contains</p>
+
+<div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1rem">
+
+  <div style="flex:1;min-width:260px">
+    <h3 style="color:var(--accent)">Live Dashboard (main screen)</h3>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:0.5rem">
+      <ul style="margin:0;padding-left:1.2rem;line-height:2">
+        <li>Probe 1 — meat temp (large display)</li>
+        <li>Probe 2 — oven ambient temp</li>
+        <li>Target temp + progress bar (% to goal)</li>
+        <li>ETA countdown ("~14 min remaining")</li>
+        <li>Alert when target reached (sound + visual)</li>
+        <li>Connect / Disconnect button</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:260px">
+    <h3 style="color:var(--accent)">Preset Picker</h3>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:0.5rem">
+      <ul style="margin:0;padding-left:1.2rem;line-height:2">
+        <li><strong>Beef:</strong> Rare 52° / Med-rare 57° / Medium 63° / Med-well 68° / Well-done 74°</li>
+        <li><strong>Pork:</strong> Medium 63° / Well-done 71°</li>
+        <li><strong>Chicken / Poultry:</strong> 74°</li>
+        <li><strong>Lamb:</strong> Rare 55° / Med-rare 60° / Well-done 72°</li>
+        <li><strong>Bread:</strong> Standard 93° / Sourdough 96°</li>
+        <li>Custom — type any target</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:260px">
+    <h3 style="color:var(--accent)">History & Graph</h3>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:0.5rem">
+      <ul style="margin:0;padding-left:1.2rem;line-height:2">
+        <li>Live temperature curve (both probes)</li>
+        <li>Target temp line overlaid</li>
+        <li>Session log — past cooks stored locally</li>
+        <li>Export session as CSV (optional)</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:1.5rem">
+  <h3 style="color:var(--accent)">ETA Algorithm</h3>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:0.5rem">
+    <p style="margin:0">Rolling average of temperature rise rate over the last <strong>5 minutes</strong> of readings → <code>(target − current) ÷ rate</code> = minutes remaining. Displayed once enough data is collected; shows "—" early in a cook when rate is unstable.</p>
+  </div>
+</div>
+
+<div style="margin-top:1.5rem">
+  <h3 style="color:var(--accent)">Data stored in localStorage</h3>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-top:0.5rem">
+    <ul style="margin:0;padding-left:1.2rem;line-height:2">
+      <li>Active session: timestamped readings from both probes</li>
+      <li>Past sessions: start time, meat type, target, peak temp</li>
+      <li>Custom presets added by user</li>
+    </ul>
+  </div>
+</div>

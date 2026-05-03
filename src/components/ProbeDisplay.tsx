@@ -21,15 +21,7 @@ export default function ProbeDisplay({ label, data, targetTempC, unit }: Props) 
     flex: 1,
   }
 
-  if (!data)
-    return (
-      <div style={surface}>
-        <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-          {label}
-        </div>
-        <div style={{ fontSize: '3rem', color: 'var(--muted)' }}>—</div>
-      </div>
-    )
+  if (!data) return null
 
   const pct = targetTempC ? Math.min(100, Math.round((data.tempC / targetTempC) * 100)) : null
   const done = pct !== null && pct >= 100

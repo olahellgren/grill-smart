@@ -8,7 +8,9 @@
       "Bash(python3 -c \"import zipfile; z=zipfile.ZipFile\\('Photos-3-001.zip'\\); z.extractall\\('extracted/'\\)\")",
       "Bash(python3 *)",
       "Bash(cp -r /tmp/gs-app/src /tmp/gs-app/index.html /tmp/gs-app/tsconfig*.json /tmp/gs-app/vite.config.ts /tmp/gs-app/public /home/ola/git/grill-smart/)",
-      "Bash(cp /tmp/gs-app/package.json /home/ola/git/grill-smart/package.json)"
+      "Bash(cp /tmp/gs-app/package.json /home/ola/git/grill-smart/package.json)",
+      "Bash(npm run *)",
+      "Bash(npx eslint *)"
     ]
   }
 }

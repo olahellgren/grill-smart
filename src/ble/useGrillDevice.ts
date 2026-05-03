@@ -157,8 +157,8 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
         const val = (e.target as BluetoothRemoteGATTCharacteristic).value!
         if (val.getUint8(0) !== 0x84) return
         const decoded = decodeStatusPacket(val)
-        if (!decoded) return
-        if (decoded.probeId === 0) setProbe1(decoded)
+        const probeId = (val.getUint8(3) >> 4) & 0x0f
+        if (probeId === 0) setProbe1(decoded)
         else setProbe2(decoded)
       })
 

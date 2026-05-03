@@ -127,17 +127,19 @@ export default function App() {
         error={device.error}
       />
 
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <ProbeDisplay label="Probe 1" data={device.probe1} targetTempC={targets[0]} unit={unit} />
-        <ProbeDisplay label="Probe 2" data={device.probe2} targetTempC={targets[1]} unit={unit} />
-      </div>
+      {(device.probe1 || device.probe2) && (
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <ProbeDisplay label="Probe 1" data={device.probe1} targetTempC={targets[0]} unit={unit} />
+          <ProbeDisplay label="Probe 2" data={device.probe2} targetTempC={targets[1]} unit={unit} />
+        </div>
+      )}
 
       {hasHistory && (
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {readings1.length >= 2 && (
+          {readings1.length >= 2 && device.probe1 && (
             <TempGraph readings={readings1} targetTempC={targets[0]} unit={unit} label="Probe 1" />
           )}
-          {readings2.length >= 2 && (
+          {readings2.length >= 2 && device.probe2 && (
             <TempGraph readings={readings2} targetTempC={targets[1]} unit={unit} label="Probe 2" />
           )}
         </div>

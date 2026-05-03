@@ -102,6 +102,7 @@ export function decodeStatusPacket(data: DataView): StatusPacket | null {
   const raw = ((b9 & 0xff) << 2) | (b8 & 0x03)
   const tempF = raw - 100
   const tempC = Math.round((((tempF - 32) * 5) / 9) * 10) / 10
+  if (tempC < -40) return null // sentinel value — probe not inserted
   const batteryPct = b2 & 0x7f
   const probeId = ((b3 & 0xf0) >> 4) as 0 | 1
   const remainingSecs = ((b8 & 0xe0) << 11) | ((b7 & 0xff) << 8) | (b6 & 0xff)

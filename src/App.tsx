@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useGrillDevice } from './ble/useGrillDevice'
 import { useEta } from './hooks/useEta'
+import { useThrottledEta } from './hooks/useThrottledEta'
 import ConnectButton from './components/ConnectButton'
 import ProbeDisplay from './components/ProbeDisplay'
 import PresetPicker from './components/PresetPicker'
-import EtaDisplay from './components/EtaDisplay'
 import TempAlert from './components/TempAlert'
 import TempGraph from './components/TempGraph'
 import InfoButton from './components/InfoButton'
@@ -133,6 +133,7 @@ export default function App() {
     probe1Ready && !alertDismissed[0] ? 1 : probe2Ready && !alertDismissed[1] ? 2 : null
 
   const eta = useEta({ readings: readings1, targetTempC: targets[0] ?? 75, ovenTempC })
+  const throttledEta = useThrottledEta(eta)
   const hasHistory = readings1.length >= 2 || readings2.length >= 2
 
   return (
@@ -162,7 +163,7 @@ export default function App() {
 
       {(device.probe1 || device.probe2) && (
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <ProbeDisplay label="Probe 1" data={device.probe1} targetTempC={targets[0]} unit={unit} />
+          <ProbeDisplay label="Probe 1" data={device.probe1} targetTempC={targets[0]} unit={unit} etaSecs={throttledEta} />
           <ProbeDisplay label="Probe 2" data={device.probe2} targetTempC={targets[1]} unit={unit} />
         </div>
       )}
@@ -199,7 +200,6 @@ export default function App() {
         <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>°{unit} — used for ETA</span>
       </div>
 
-      {device.status === 'connected' && targets[0] !== null && <EtaDisplay etaSecs={eta} />}
 
       <PresetPicker
         unit={unit}

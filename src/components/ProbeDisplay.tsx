@@ -6,6 +6,7 @@ interface Props {
   data: StatusPacket | null
   targetTempC: number | null
   unit: TempUnit
+  etaSecs?: number | null
 }
 
 function toDisplay(tempC: number, unit: TempUnit): string {
@@ -13,7 +14,7 @@ function toDisplay(tempC: number, unit: TempUnit): string {
   return `${val}°${unit}`
 }
 
-export default function ProbeDisplay({ label, data, targetTempC, unit }: Props) {
+export default function ProbeDisplay({ label, data, targetTempC, unit, etaSecs }: Props) {
   const surface: React.CSSProperties = {
     background: 'var(--surface)',
     borderRadius: '12px',
@@ -64,6 +65,14 @@ export default function ProbeDisplay({ label, data, targetTempC, unit }: Props) 
               }}
             />
           </div>
+          {etaSecs !== undefined && etaSecs !== null && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--muted)' }}>
+              {etaSecs === 0
+                ? <span style={{ color: 'var(--green)', fontWeight: 'bold' }}>✓ Ready!</span>
+                : <>ETA <span style={{ fontWeight: 'bold', color: 'var(--text)' }}>~{Math.ceil(etaSecs / 60)} min</span></>
+              }
+            </div>
+          )}
         </>
       )}
     </div>

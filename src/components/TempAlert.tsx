@@ -58,7 +58,7 @@ export default function TempAlert({ probeNum, onDismiss }: Props) {
       }}
     >
       <div style={{ maxWidth: '480px', margin: '0 auto', textAlign: 'center' }}>
-        <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>✅</div>
+        <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>✓</div>
         <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.1rem' }}>
           Probe {probeNum} is ready!
         </div>

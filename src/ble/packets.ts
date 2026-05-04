@@ -55,6 +55,10 @@ export function buildPollStatus(probeId: 0 | 1, nonce: number): Uint8Array {
   return p
 }
 
+// TODO: foodSelection and doneness are always sent as 0 (generic). The device likely
+// uses foodSelection in its own remainingSecs ETA algorithm. Mapping our preset food
+// types to the device's numeric codes would make the on-screen ETA more accurate,
+// but the device's food codes haven't been reverse-engineered yet.
 export function buildSetCookingSettings(
   nonce: number,
   probeId: 0 | 1,

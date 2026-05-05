@@ -110,11 +110,14 @@ export default function App() {
     }
   }, [device.status])
 
-  // Push cooking settings whenever target or unit changes while connected
+  // Push cooking settings whenever target or unit changes while connected.
+  // Sequential awaits avoid racing two BLE writes against each other and the poll interval.
   useEffect(() => {
     if (device.status !== 'connected') return
-    device.setTarget(0, targets[0] ?? 75, unit)
-    device.setTarget(1, targets[1] ?? 75, unit)
+    ;(async () => {
+      if (targets[0] !== null) await device.setTarget(0, targets[0], unit)
+      if (targets[1] !== null) await device.setTarget(1, targets[1], unit)
+    })()
   }, [targets, unit, device.status, device.setTarget]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handlePreset(preset: MeatPreset) {

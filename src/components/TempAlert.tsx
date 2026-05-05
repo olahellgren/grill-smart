@@ -19,9 +19,11 @@ function playBeeps() {
       osc.start(t)
       osc.stop(t + 0.4)
     }
-    beep(ctx.currentTime)
-    beep(ctx.currentTime + 0.5)
-    beep(ctx.currentTime + 1.0)
+    ctx.resume().then(() => {
+      beep(ctx.currentTime)
+      beep(ctx.currentTime + 0.5)
+      beep(ctx.currentTime + 1.0)
+    })
   } catch {
     /* audio not available */
   }

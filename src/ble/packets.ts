@@ -67,7 +67,8 @@ export function buildSetCookingSettings(
   foodSelection = 0,
   doneness = 0,
 ): Uint8Array {
-  const tRaw = targetTempC + 100
+  const targetTempF = (targetTempC * 9) / 5 + 32
+  const tRaw = Math.round(targetTempF) + 100
   const eRaw = tRaw
   const unit = tempUnit === 'F' ? 1 : 0
   const p = new Uint8Array(10)

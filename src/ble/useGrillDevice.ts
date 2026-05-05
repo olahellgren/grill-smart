@@ -43,10 +43,16 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
   const nonceRef = useRef<number>(0)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const deviceRef = useRef<BluetoothDevice | null>(null)
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve())
 
   const write = useCallback(async (bytes: Uint8Array) => {
     if (!writeCharRef.current) throw new Error('Not connected')
-    await writeCharRef.current.writeValueWithResponse(bytes as Uint8Array<ArrayBuffer>)
+    const char = writeCharRef.current
+    // Chain onto the queue so only one GATT write is in flight at a time.
+    writeQueueRef.current = writeQueueRef.current
+      .catch(() => {})
+      .then(() => char.writeValueWithResponse(bytes as Uint8Array<ArrayBuffer>))
+    return writeQueueRef.current
   }, [])
 
   const waitForNotification = useCallback(
@@ -85,6 +91,7 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
       deviceRef.current = device
       device.addEventListener('gattserverdisconnected', () => {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+        writeQueueRef.current = Promise.resolve()
         setStatus('disconnected')
         setProbe1(null)
         setProbe2(null)
@@ -189,6 +196,7 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
 
   const disconnect = useCallback(() => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+    writeQueueRef.current = Promise.resolve()
     deviceRef.current?.gatt?.disconnect()
   }, [])
 

@@ -40,6 +40,7 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
   const [error, setError] = useState<string | null>(null)
 
   const writeCharRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null)
+  const notifyCharRef = useRef<BluetoothRemoteGATTCharacteristic | null>(null)
   const nonceRef = useRef<number>(0)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const deviceRef = useRef<BluetoothDevice | null>(null)
@@ -92,6 +93,7 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
       device.addEventListener('gattserverdisconnected', () => {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
         writeQueueRef.current = Promise.resolve()
+        notifyCharRef.current = null
         setStatus('disconnected')
         setProbe1(null)
         setProbe2(null)
@@ -117,6 +119,7 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
       const notifyChar = await service.getCharacteristic(NOTIFY_CHAR_UUID)
       const writeChar = await service.getCharacteristic(WRITE_CHAR_UUID)
       writeCharRef.current = writeChar
+      notifyCharRef.current = notifyChar
 
       await notifyChar.startNotifications()
 
@@ -154,10 +157,14 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
       await write(buildClockSync(nonce))
       await p4
 
-      // Step 5: push unit preference to device so probe display and readings use the right unit
+      // Step 5: push initial cooking settings — wait for 0x86 ack each time
+      // before sending the next write, matching the pattern of steps 1–4.
+      const p5a = waitForNotification(notifyChar, 0x86)
       await write(buildSetCookingSettings(nonce, 0, 75, preferredUnit))
-      await new Promise((r) => setTimeout(r, 200))
+      await p5a
+      const p5b = waitForNotification(notifyChar, 0x86)
       await write(buildSetCookingSettings(nonce, 1, 75, preferredUnit))
+      await p5b
 
       // Live temperature notifications
       notifyChar.addEventListener('characteristicvaluechanged', (e: Event) => {
@@ -197,17 +204,30 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
   const disconnect = useCallback(() => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
     writeQueueRef.current = Promise.resolve()
+    notifyCharRef.current = null
     deviceRef.current?.gatt?.disconnect()
   }, [])
 
   const setTarget = useCallback(
     async (probeId: 0 | 1, targetTempC: number, unit: TempUnit, food = 0, doneness = 0) => {
       console.debug(`[BLE] setTarget probe${probeId} → ${targetTempC}°${unit} food=${food} doneness=${doneness}`)
-      await write(
-        buildSetCookingSettings(nonceRef.current, probeId, targetTempC, unit, food, doneness),
-      )
+      if (!writeCharRef.current || !notifyCharRef.current) throw new Error('Not connected')
+      const char = writeCharRef.current
+      const notifyChar = notifyCharRef.current
+      // Enqueue the entire write + 0x86 ack as one atomic operation so the
+      // poll interval cannot fire between the write and the device's response.
+      writeQueueRef.current = writeQueueRef.current
+        .catch(() => {})
+        .then(async () => {
+          const ack = waitForNotification(notifyChar, 0x86, 3000)
+          await char.writeValueWithResponse(
+            buildSetCookingSettings(nonceRef.current, probeId, targetTempC, unit, food, doneness) as Uint8Array<ArrayBuffer>,
+          )
+          await ack
+        })
+      return writeQueueRef.current
     },
-    [write],
+    [waitForNotification],
   )
 
   return { status, probe1, probe2, connect, disconnect, setTarget, error }

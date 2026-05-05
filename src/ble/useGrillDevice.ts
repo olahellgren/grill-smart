@@ -155,7 +155,14 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
       // Live temperature notifications
       notifyChar.addEventListener('characteristicvaluechanged', (e: Event) => {
         const val = (e.target as BluetoothRemoteGATTCharacteristic).value!
-        if (val.getUint8(0) !== 0x84) return
+        const header = val.getUint8(0)
+        if (header !== 0x84) {
+          console.debug(
+            `[BLE] rx 0x${header.toString(16).padStart(2, '0')}`,
+            Array.from(new Uint8Array(val.buffer)).map((b) => `0x${b.toString(16).padStart(2, '0')}`).join(' '),
+          )
+          return
+        }
         const decoded = decodeStatusPacket(val)
         const probeId = (val.getUint8(3) >> 4) & 0x0f
         if (probeId === 0) setProbe1(decoded)
@@ -187,6 +194,7 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
 
   const setTarget = useCallback(
     async (probeId: 0 | 1, targetTempC: number, unit: TempUnit, food = 0, doneness = 0) => {
+      console.debug(`[BLE] setTarget probe${probeId} → ${targetTempC}°${unit} food=${food} doneness=${doneness}`)
       await write(
         buildSetCookingSettings(nonceRef.current, probeId, targetTempC, unit, food, doneness),
       )

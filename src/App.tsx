@@ -124,6 +124,12 @@ export default function App() {
     }
   }, [device.status])
 
+  // Auto-switch activeProbe to a connected probe when the selected one disconnects
+  useEffect(() => {
+    if (activeProbe === 0 && !device.probe1 && device.probe2) setActiveProbe(1)
+    if (activeProbe === 1 && !device.probe2 && device.probe1) setActiveProbe(0)
+  }, [device.probe1, device.probe2, activeProbe])
+
   // Push cooking settings whenever target or unit changes while connected.
   useEffect(() => {
     if (device.status !== 'connected') return
@@ -250,6 +256,8 @@ export default function App() {
         unit={unit}
         activeProbe={activeProbe}
         activeTempC={targets[activeProbe]}
+        probe1Connected={!!device.probe1}
+        probe2Connected={!!device.probe2}
         onProbeChange={setActiveProbe}
         onSelect={handlePreset}
         onCustom={handleCustom}

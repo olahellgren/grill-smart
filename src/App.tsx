@@ -18,11 +18,17 @@ export default function App() {
 
   const [activeProbe, setActiveProbe] = useState<0 | 1>(0)
   const [targets, setTargets] = useState<[number | null, number | null]>([null, null])
+  const [foods, setFoods] = useState<[number, number]>([0, 0])
+  const [doneness, setDoneness] = useState<[number, number]>([0, 0])
   const [alertDismissed, setAlertDismissed] = useState<[boolean, boolean]>([false, false])
   const [readings1, setReadings1] = useState<ProbeReading[]>([])
   const [readings2, setReadings2] = useState<ProbeReading[]>([])
+  const [graphReadings1, setGraphReadings1] = useState<ProbeReading[]>([])
+  const [graphReadings2, setGraphReadings2] = useState<ProbeReading[]>([])
   const [ovenTempC, setOvenTempC] = useState(180)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const cookStartTempRef = useRef<[number | null, number | null]>([null, null])
+  const cookStartedRef = useRef<[boolean, boolean]>([false, false])
 
   // Session resume state — null = not yet decided, undefined = no saved session
   const [pendingSession, setPendingSession] = useState<ReturnType<typeof loadSession> | undefined>(undefined)
@@ -86,47 +92,83 @@ export default function App() {
     }
   }, [device.status])
 
-  // Accumulate readings per probe
+  // Accumulate readings per probe; graph state samples at 1-per-minute
   useEffect(() => {
     if (!device.probe1) return
-    setReadings1((prev) => [
-      ...prev.slice(-300),
-      { probeId: 0, tempC: device.probe1!.tempC, batteryPct: device.probe1!.batteryPct, timestamp: Date.now() },
-    ])
+    const r = { probeId: 0 as const, tempC: device.probe1.tempC, batteryPct: device.probe1.batteryPct, timestamp: Date.now() }
+    setReadings1((prev) => [...prev.slice(-300), r])
+    setGraphReadings1((prev) => {
+      const last = prev[prev.length - 1]
+      if (last && r.timestamp - last.timestamp < 60_000) return prev
+      return [...prev.slice(-300), r]
+    })
   }, [device.probe1])
 
   useEffect(() => {
     if (!device.probe2) return
-    setReadings2((prev) => [
-      ...prev.slice(-300),
-      { probeId: 1, tempC: device.probe2!.tempC, batteryPct: device.probe2!.batteryPct, timestamp: Date.now() },
-    ])
+    const r = { probeId: 1 as const, tempC: device.probe2.tempC, batteryPct: device.probe2.batteryPct, timestamp: Date.now() }
+    setReadings2((prev) => [...prev.slice(-300), r])
+    setGraphReadings2((prev) => {
+      const last = prev[prev.length - 1]
+      if (last && r.timestamp - last.timestamp < 60_000) return prev
+      return [...prev.slice(-300), r]
+    })
   }, [device.probe2])
 
   // Clear readings on disconnect but keep targets — user will reconnect to same cook
   useEffect(() => {
     if (device.status === 'disconnected') {
       setAlertDismissed([false, false])
+      cookStartTempRef.current = [null, null]
+      cookStartedRef.current = [false, false]
     }
   }, [device.status])
 
   // Push cooking settings whenever target or unit changes while connected.
-  // Sequential awaits avoid racing two BLE writes against each other and the poll interval.
   useEffect(() => {
     if (device.status !== 'connected') return
     ;(async () => {
-      if (targets[0] !== null) await device.setTarget(0, targets[0], unit)
-      if (targets[1] !== null) await device.setTarget(1, targets[1], unit)
+      if (targets[0] !== null) await device.setTarget(0, targets[0], unit, foods[0], doneness[0])
+      if (targets[1] !== null) await device.setTarget(1, targets[1], unit, foods[1], doneness[1])
     })()
-  }, [targets, unit, device.status, device.setTarget]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [targets, foods, doneness, unit, device.status, device.setTarget]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Send 0xa9 STARTED once probe has risen ≥10°C from cook start or is within 10°C of target.
+  useEffect(() => {
+    if (!device.probe1 || targets[0] === null || cookStartedRef.current[0]) return
+    const t = device.probe1.tempC
+    if (cookStartTempRef.current[0] === null) { cookStartTempRef.current[0] = t; return }
+    if (t - cookStartTempRef.current[0] >= 10 || targets[0] - t <= 10) {
+      cookStartedRef.current[0] = true
+      device.startCooking(0)
+    }
+  }, [device.probe1, targets, device.startCooking])
+
+  useEffect(() => {
+    if (!device.probe2 || targets[1] === null || cookStartedRef.current[1]) return
+    const t = device.probe2.tempC
+    if (cookStartTempRef.current[1] === null) { cookStartTempRef.current[1] = t; return }
+    if (t - cookStartTempRef.current[1] >= 10 || targets[1] - t <= 10) {
+      cookStartedRef.current[1] = true
+      device.startCooking(1)
+    }
+  }, [device.probe2, targets, device.startCooking])
 
   function handlePreset(preset: MeatPreset) {
+    cookStartTempRef.current[activeProbe] = null
+    cookStartedRef.current[activeProbe] = false
     setTargets((prev) => prev.map((t, i) => (i === activeProbe ? preset.targetTempC : t)) as [number | null, number | null])
+    setFoods((prev) => prev.map((f, i) => (i === activeProbe ? preset.foodCode : f)) as [number, number])
+    setDoneness((prev) => prev.map((d, i) => (i === activeProbe ? preset.doneness : d)) as [number, number])
     setAlertDismissed((prev) => prev.map((d, i) => (i === activeProbe ? false : d)) as [boolean, boolean])
   }
 
   function handleCustom(tempC: number) {
+    cookStartTempRef.current[activeProbe] = null
+    cookStartedRef.current[activeProbe] = false
     setTargets((prev) => prev.map((t, i) => (i === activeProbe ? tempC : t)) as [number | null, number | null])
+    setFoods((prev) => prev.map((f, i) => (i === activeProbe ? 5 : f)) as [number, number])
+    setDoneness((prev) => prev.map((d, i) => (i === activeProbe ? 3 : d)) as [number, number])
     setAlertDismissed((prev) => prev.map((d, i) => (i === activeProbe ? false : d)) as [boolean, boolean])
   }
 
@@ -137,7 +179,7 @@ export default function App() {
 
   const eta = useEta({ readings: readings1, targetTempC: targets[0] ?? 75, ovenTempC })
   const throttledEta = useThrottledEta(eta)
-  const hasHistory = readings1.length >= 2 || readings2.length >= 2
+  const hasHistory = graphReadings1.length >= 2 || graphReadings2.length >= 2
 
   return (
     <div className="app">
@@ -173,11 +215,11 @@ export default function App() {
 
       {hasHistory && (
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {readings1.length >= 2 && device.probe1 && (
-            <TempGraph readings={readings1} targetTempC={targets[0]} unit={unit} label="Probe 1" />
+          {graphReadings1.length >= 2 && device.probe1 && (
+            <TempGraph readings={graphReadings1} targetTempC={targets[0]} unit={unit} label="Probe 1" />
           )}
-          {readings2.length >= 2 && device.probe2 && (
-            <TempGraph readings={readings2} targetTempC={targets[1]} unit={unit} label="Probe 2" />
+          {graphReadings2.length >= 2 && device.probe2 && (
+            <TempGraph readings={graphReadings2} targetTempC={targets[1]} unit={unit} label="Probe 2" />
           )}
         </div>
       )}

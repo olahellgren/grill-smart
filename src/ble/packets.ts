@@ -55,10 +55,6 @@ export function buildPollStatus(probeId: 0 | 1, nonce: number): Uint8Array {
   return p
 }
 
-// TODO: foodSelection and doneness are always sent as 0 (generic). The device likely
-// uses foodSelection in its own remainingSecs ETA algorithm. Mapping our preset food
-// types to the device's numeric codes would make the on-screen ETA more accurate,
-// but the device's food codes haven't been reverse-engineered yet.
 export function buildSetCookingSettings(
   nonce: number,
   probeId: 0 | 1,
@@ -67,13 +63,16 @@ export function buildSetCookingSettings(
   foodSelection = 0,
   doneness = 0,
 ): Uint8Array {
-  const tRaw = targetTempC + 100
+  const tRaw = Math.round((targetTempC * 9) / 5 + 32) + 100
   const eRaw = tRaw
   const unit = tempUnit === 'F' ? 1 : 0
+  // Mode 1 = MANUAL: device alarms at the target we send. Mode 0 = PRESET makes
+  // the device use its internal food/doneness lookup table instead, ignoring our target.
+  const mode = 1
   const p = new Uint8Array(10)
   p[0] = 0xa6
   p[1] = 10
-  p[2] = ((doneness & 7) << 4) | (eRaw & 0x0f)
+  p[2] = (mode << 7) | ((doneness & 7) << 4) | (eRaw & 0x0f)
   p[3] = ((foodSelection & 0x7f) << 1) | unit
   p[4] = tRaw & 0xff
   p[5] = ((tRaw & 0x300) >> 3) | ((eRaw & 0x1f0) >> 4)
@@ -81,6 +80,12 @@ export function buildSetCookingSettings(
   p[7] = probeId & 0x0f
   p[8] = nonce
   p[9] = xorChecksum(p, 9)
+  return p
+}
+
+export function buildControlCooking(nonce: number, probeId: 0 | 1, status: number): Uint8Array {
+  const p = new Uint8Array([0xa9, 0x06, probeId, status, nonce, 0x00])
+  p[5] = xorChecksum(p, 5)
   return p
 }
 

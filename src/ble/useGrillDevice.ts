@@ -7,6 +7,7 @@ import {
   buildClockSync,
   buildPollStatus,
   buildSetCookingSettings,
+  buildControlCooking,
   decodeDeviceState,
   decodeTokenReply,
   decodeStatusPacket,
@@ -30,6 +31,7 @@ export interface GrillDevice {
     food?: number,
     doneness?: number,
   ) => Promise<void>
+  startCooking: (probeId: 0 | 1) => Promise<void>
   error: string | null
 }
 
@@ -214,21 +216,39 @@ export function useGrillDevice(preferredUnit: TempUnit = 'C'): GrillDevice {
       if (!writeCharRef.current || !notifyCharRef.current) throw new Error('Not connected')
       const char = writeCharRef.current
       const notifyChar = notifyCharRef.current
-      // Enqueue the entire write + 0x86 ack as one atomic operation so the
-      // poll interval cannot fire between the write and the device's response.
       writeQueueRef.current = writeQueueRef.current
         .catch(() => {})
         .then(async () => {
-          const ack = waitForNotification(notifyChar, 0x86, 3000)
+          const ack86 = waitForNotification(notifyChar, 0x86, 3000)
           await char.writeValueWithResponse(
             buildSetCookingSettings(nonceRef.current, probeId, targetTempC, unit, food, doneness) as Uint8Array<ArrayBuffer>,
           )
-          await ack
+          await ack86
         })
       return writeQueueRef.current
     },
     [waitForNotification],
   )
 
-  return { status, probe1, probe2, connect, disconnect, setTarget, error }
+  const startCooking = useCallback(
+    async (probeId: 0 | 1) => {
+      console.debug(`[BLE] startCooking probe${probeId}`)
+      if (!writeCharRef.current || !notifyCharRef.current) return
+      const char = writeCharRef.current
+      const notifyChar = notifyCharRef.current
+      writeQueueRef.current = writeQueueRef.current
+        .catch(() => {})
+        .then(async () => {
+          const ack89 = waitForNotification(notifyChar, 0x89, 3000)
+          await char.writeValueWithResponse(
+            buildControlCooking(nonceRef.current, probeId, 0) as Uint8Array<ArrayBuffer>,
+          )
+          await ack89
+        })
+      return writeQueueRef.current
+    },
+    [waitForNotification],
+  )
+
+  return { status, probe1, probe2, connect, disconnect, setTarget, startCooking, error }
 }

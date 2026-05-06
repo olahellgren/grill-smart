@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Tooltip } from 'recharts'
 import type { ProbeReading } from '../types'
 import type { TempUnit } from '../types'
@@ -19,7 +20,7 @@ function formatElapsed(secs: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export default function TempGraph({ readings, targetTempC, unit, label }: Props) {
+export default memo(function TempGraph({ readings, targetTempC, unit, label }: Props) {
   if (readings.length < 2) return null
 
   const t0 = readings[0].timestamp
@@ -85,4 +86,4 @@ export default function TempGraph({ readings, targetTempC, unit, label }: Props)
       </ResponsiveContainer>
     </div>
   )
-}
+})

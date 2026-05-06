@@ -19,6 +19,8 @@ export interface MeatPreset {
   meat: string
   label: string
   targetTempC: number
+  foodCode: number
+  doneness: number
 }
 
 export type TempUnit = 'C' | 'F'
